@@ -1,0 +1,58 @@
+#include "opencv2/highgui/highgui.hpp"
+ #include "opencv2/opencv.hpp"
+ #include "opencv2/core/core.hpp"
+ #include <iostream>
+ 
+  using namespace std;
+  using namespace cv;
+
+int main(){
+
+Mat src = imread("/home/aadc/Desktop/images/base/result/result.png",1);
+
+Mat row_mean, col_mean;
+reduce(src,row_mean, 1, CV_REDUCE_AVG);
+//reduce(src,col_mean, 1, CV_REDUCE_AVG);
+
+//Pixel access
+
+//change some pixel value
+for(int j=0;j<src.rows;j++)
+{
+unsigned char row_mean_value = row_mean.at<unsigned char>(j);
+  for (int i=0;i<src.cols;i++)
+  {
+  		//cout << row_mean_value << endl;
+      src.at<uchar>(j,i) = row_mean_value;
+  }
+}
+
+
+
+// Gaussian Denoise
+/*Mat dst;
+fastNlMeansDenoising(src, dst, 100, 7, 21);
+
+ // display the source image
+   //imshow("Before", src);
+
+for (int i=1; i<31; i=i+2)
+   { 
+      // smooth the image in the "src" and save it to "dst"
+      // blur(src, dst, Size(i,i));
+
+      // Gaussian smoothing
+      //GaussianBlur( src, dst, Size( i, i ), 0, 0 );
+
+      //show the blurred image with the text
+      //imshow( "Gaussian filter", dst );
+
+      //wait for 5 seconds
+      //waitKey(5000);
+   }
+   */
+// write to picture
+imwrite("/home/aadc/Desktop/images/base/result/result3.png",src);
+
+//return 0;
+}

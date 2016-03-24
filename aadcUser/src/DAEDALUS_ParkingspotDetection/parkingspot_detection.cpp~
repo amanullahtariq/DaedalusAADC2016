@@ -1,0 +1,663 @@
+/**
+Copyright (c) 
+Audi Autonomous Driving Cup. All rights reserved. TEAM DAEDALUS
+ 
+Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
+ 
+1. Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
+2. Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
+3.  All advertising materials mentioning features or use of this software must display the following acknowledgement: �This product includes software developed by the Audi AG and its contributors for Audi Autonomous Driving Cup.�
+4.  Neither the name of Audi nor the names of its contributors may be used to endorse or promote products derived from this software without specific prior written permission.
+ 
+THIS SOFTWARE IS PROVIDED BY AUDI AG AND CONTRIBUTORS �AS IS� AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL AUDI AG OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+<<<<<<< HEAD
+
+Summary:
+
+1) Filter for detecting parking area from the image
+
+**********************************************************************
+* $Author:: spiesra $  $Date:: 10-Feb-2016 08:29:07#$ $Rev:: 35003   $
+* Updated By:: Amanullah Tariq 
+**********************************************************************/
+=======
+
+Summary:
+
+1) Filter for detecting parking area from the image
+
+**********************************************************************
+* $Author:: spiesra $  $Date:: 10-Feb-2016 08:29:07#$ $Rev:: 35003   $
+* Updated By:: Amanullah Tariq 
+**********************************************************************/
+
+
+#include "stdafx.h"
+#include "daedalus_action_enums.h"
+#include "IPM.h"
+#include "constant.h"
+#include "ParkingType.h"
+#include "parkingspot_detection.h"
+
+ADTF_FILTER_PLUGIN("DAEDALUS Parkingspot Detection", OID_ADTF_PARKINGSPOT_DETECTION, cParkingspotDetection)
+
+#define AF_PROP_SHOW_LOG "Common::Show Log"
+const int i =0;
+>>>>>>> f96dbd57b445da358d738222a8ba7bec93354314
+
+namespace patch
+{
+	template < typename T > std::string to_string(const T& n)
+	{
+		std::ostringstream stm;
+		stm << n;
+		return stm.str();
+	}
+}
+
+<<<<<<< HEAD
+#include "stdafx.h"
+
+
+ADTF_FILTER_PLUGIN("DAEDALUS Parkingspot Detection", OID_ADTF_PARKINGSPOT_DETECTION, cParkingspotDetection)
+
+#define AF_PROP_SHOW_LOG "Common::Show Log"
+
+const int i =0;
+
+namespace patch
+{
+	template < typename T > std::string to_string(const T& n)
+	{
+		std::ostringstream stm;
+		stm << n;
+		return stm.str();
+	}
+}
+
+
+
+cParkingspotDetection::cParkingspotDetection(const tChar* __info):cFilter(__info)
+{
+	/****************** Start of Debug ***************/
+	SetPropertyBool(AF_PROP_SHOW_LOG,tTrue);
+	SetPropertyStr(AF_PROP_SHOW_LOG NSSUBPROP_DESCRIPTION, "If true show log values");
+
+}
+
+cParkingspotDetection::~cParkingspotDetection() {
+// -------------------------------------------------------------------------------------------------
+
+}
+
+tResult cParkingspotDetection::Init(tInitStage eStage, __exception)
+{
+	RETURN_IF_FAILED(cFilter::Init(eStage, __exception_ptr))
+  
+	if (eStage == StageFirst) 
+	{
+		CreateInputPins(__exception_ptr);
+		CreateOutputPins(__exception_ptr);
+	}
+	else if (eStage == StageNormal)
+    {
+		isFirstFrame = true;
+		isEnable = false;
+		ReadProperties();
+	}
+  
+	RETURN_NOERROR;
+}
+
+tResult cParkingspotDetection::Shutdown(tInitStage estage, __exception) {
+
+  if (estage == StageGraphReady)
+    {
+    }
+    else if (estage == StageNormal)
+    {
+    }
+    else if (estage == StageFirst)
+    {
+    }
+
+  return cFilter::Shutdown(estage,__exception_ptr);
+}
+
+tResult cParkingspotDetection::OnPinEvent(IPin* pSource, tInt nEventCode, tInt nParam1, tInt nParam2, IMediaSample* pMediaSample)
+{
+  RETURN_IF_POINTER_NULL(pMediaSample);
+  RETURN_IF_POINTER_NULL(pSource);
+
+  if(nEventCode == IPinEventSink::PE_MediaSampleReceived)
+  {
+	  tTimeStamp InputTimeStamp;
+      InputTimeStamp = pMediaSample->GetTime();
+
+	  if (pSource == &VideoInputPin && isEnable)
+	   {
+		   if (isFirstFrame)
+            {        
+                cObjectPtr<IMediaType> pType;
+                RETURN_IF_FAILED(VideoInputPin.GetMediaType(&pType));
+                cObjectPtr<IMediaTypeVideo> pTypeVideo;
+                RETURN_IF_FAILED(pType->GetInterface(IID_ADTF_MEDIA_TYPE_VIDEO, (tVoid**)&pTypeVideo));
+                const tBitmapFormat* pFormat = pTypeVideo->GetFormat();                                
+                if (pFormat == NULL)
+                {
+                    LOG_ERROR("No Bitmap information found on pin \"input\"");
+                    RETURN_ERROR(ERR_NOT_SUPPORTED);
+                }
+                m_sInputFormat.nPixelFormat = pFormat->nPixelFormat;
+                m_sInputFormat.nWidth = pFormat->nWidth;
+                m_sInputFormat.nHeight =  pFormat->nHeight;
+                m_sInputFormat.nBitsPerPixel = pFormat->nBitsPerPixel;
+                m_sInputFormat.nBytesPerLine = pFormat->nBytesPerLine;
+                m_sInputFormat.nSize = pFormat->nSize;
+                m_sInputFormat.nPaletteSize = pFormat->nPaletteSize;
+				isFirstFrame = false;
+            }
+            ProcessImage(pMediaSample, InputTimeStamp);
+        }
+	  else if(pSource == &DriverActionPin && isEnable)
+	  {
+		   tUInt32 DriverActionTime = 0;
+            tBool DriverIsProcessed = tFalse;
+            {   // focus for sample read lock
+                    __adtf_sample_read_lock_mediadescription(m_pDescriptionDecisionInput,pMediaSample,pCoderInput);       
+                    if(!DriverModuleBufferReaderFlag)
+                    {
+                        pCoderInput->GetID("i32Value", DriverNextActionBuffer);
+                        pCoderInput->GetID("ui32Timestamp",DriverTimeBuffer);
+                        pCoderInput->GetID("bIsExecuted",DriverIsProcessedBuffer);
+                        DriverModuleBufferReaderFlag = tTrue;
+                    }  
+                    // get the values from DriverNextAction
+                    pCoderInput->Get(DriverNextActionBuffer, (tVoid*)&DriverNextAction);
+                    pCoderInput->Get(DriverTimeBuffer, (tVoid*)&DriverActionTime);
+                    pCoderInput->Get(DriverIsProcessedBuffer, (tVoid*)&DriverIsProcessed);       
+			}
+			if (m_bShowLog)   
+			{
+                    LOG_ERROR(cString::Format("ParkingSpot Deteciton: DriverModule Data: ID -> %d time: %d isProcessed: %d",DriverNextAction, DriverActionTime,DriverIsProcessed));
+			}
+	  }
+	  else if(pSource == &StartPin)
+	  {
+		  {   // focus for sample read lock
+			  __adtf_sample_read_lock_mediadescription(m_pCoderDescBool,pMediaSample,pCoder);
+			  pCoder->Get("bValue", (tVoid*)&isEnable);        
+		  }
+		  if (m_bShowLog)   
+			{
+                    LOG_ERROR(cString::Format("ParkingSpot Deteciton: Start:%d",isEnable));
+			}
+	  }
+  }
+      RETURN_NOERROR;
+}
+
+/*************** Custom Method ********************/
+
+tVoid cParkingspotDetection::ReadProperties()
+{
+	/********************* Properties for Show Log **************************/
+	m_bShowLog = GetPropertyBool(AF_PROP_SHOW_LOG);
+}
+
+tResult cParkingspotDetection::CreateInputPins(__exception)
+{
+	cObjectPtr<IMediaDescriptionManager> pDescManager;
+    RETURN_IF_FAILED(_runtime->GetObject(OID_ADTF_MEDIA_DESCRIPTION_MANAGER,IID_ADTF_MEDIA_DESCRIPTION_MANAGER,(tVoid**)&pDescManager,__exception_ptr));
+  
+	// Media Description Bool
+    tChar const * strDescSignalBoolValue = pDescManager->GetMediaDescription("tBoolSignalValue");
+    RETURN_IF_POINTER_NULL(strDescSignalBoolValue);
+    cObjectPtr<IMediaType> pTypeSignalBoolValue = new cMediaType(0, 0, 0, "tBoolSignalValue", strDescSignalBoolValue,IMediaDescription::MDF_DDL_DEFAULT_VERSION);    
+    RETURN_IF_FAILED(pTypeSignalBoolValue->GetInterface(IID_ADTF_MEDIA_TYPE_DESCRIPTION, (tVoid**)&m_pCoderDescBool));
+
+	// Media Description ID 
+	tChar const * strDescIdValue = pDescManager->GetMediaDescription("tIdValue");    
+    RETURN_IF_POINTER_NULL(strDescIdValue);
+    cObjectPtr<IMediaType> pTypeIdValue = new cMediaType(0, 0, 0, "tIdValue", strDescIdValue,IMediaDescription::MDF_DDL_DEFAULT_VERSION);    
+	RETURN_IF_FAILED(pTypeIdValue->GetInterface(IID_ADTF_MEDIA_TYPE_DESCRIPTION, (tVoid**)&m_pDescriptionDecisionInput)); 
+
+	 //Input Pin from Camera
+    RETURN_IF_FAILED(VideoInputPin.Create("Video_Input", IPin::PD_Input, static_cast<IPinEventSink*>(this)));
+    RETURN_IF_FAILED(RegisterPin(&VideoInputPin)); 
+      
+     // Action Pin from Jury
+    RETURN_IF_FAILED(DriverActionPin.Create("Action",pTypeIdValue, static_cast<IPinEventSink*> (this)));
+    RETURN_IF_FAILED(RegisterPin(&DriverActionPin));
+
+	 // Start Pin to enable the filter
+    RETURN_IF_FAILED(StartPin.Create("Start",pTypeSignalBoolValue, static_cast<IPinEventSink*> (this)));
+    RETURN_IF_FAILED(RegisterPin(&StartPin));
+
+	RETURN_NOERROR;
+}
+
+tResult cParkingspotDetection::CreateOutputPins(__exception)
+{
+	cObjectPtr<IMediaDescriptionManager> pDescManager;
+    RETURN_IF_FAILED(_runtime->GetObject(OID_ADTF_MEDIA_DESCRIPTION_MANAGER,IID_ADTF_MEDIA_DESCRIPTION_MANAGER,(tVoid**)&pDescManager,__exception_ptr));
+
+	// Media Description Signal
+    tChar const * strDescSignalValue = pDescManager->GetMediaDescription("tSignalValue");
+    RETURN_IF_POINTER_NULL(strDescSignalValue);        
+    cObjectPtr<IMediaType> pTypeSignalValue = new cMediaType(0, 0, 0, "tSignalValue", strDescSignalValue,IMediaDescription::MDF_DDL_DEFAULT_VERSION);    
+    RETURN_IF_FAILED(pTypeSignalValue->GetInterface(IID_ADTF_MEDIA_TYPE_DESCRIPTION, (tVoid**)&m_pCoderDescSignal)); 
+
+	 //Acceleration Output
+    RETURN_IF_FAILED(ParkingInfoPin.Create("ParkingInfo", pTypeSignalValue, static_cast<IPinEventSink*> (this)));
+    RETURN_IF_FAILED(RegisterPin(&ParkingInfoPin));
+    
+
+	RETURN_NOERROR;
+}
+
+tResult cParkingspotDetection::ProcessImage(IMediaSample* pSample, tTimeStamp tsInputTime)
+{
+	RETURN_IF_POINTER_NULL(pSample);
+	const tVoid* l_pSrcBuffer;
+	IplImage* oImg = cvCreateImageHeader(cvSize(m_sInputFormat.nWidth, m_sInputFormat.nHeight), IPL_DEPTH_8U, 3);
+	RETURN_IF_FAILED(pSample->Lock(&l_pSrcBuffer));
+	oImg->imageData = (char*)l_pSrcBuffer;
+	Mat image(cvarrToMat(oImg));
+	cvReleaseImage(&oImg);
+	pSample->Unlock(l_pSrcBuffer);
+	inputImage = image.clone();
+	isEnable = false;
+	RETURN_NOERROR;
+}
+
+tVoid cParkingspotDetection::GetParkingInfo()
+{
+	Mat outputImg, gray, binary, blob;
+	float line_dist = 0.0;
+	float distance = 999;
+	float threshValue = 200;
+	bool isParallelSpace = false;
+	bool isCrossSpace = false;
+	float BLOB_BOUND = 3.0;
+	float BLOB_SUPPORT = 12;
+	bool parallel = true;
+	float MIN_DISTANCE_CROSS = 80.0;
+	float MAX_DISTANCE_CROSS = 100.0;
+	float MIN_DISTANCE_PARALLEL = 130.0;
+	float MAX_DISTANCE_PARALLEL = 150.0;
+	
+	
+	GenerateIPM(inputImage, outputImg);
+	Mat roi = outputImg(Rect(420, 100, WIDTH - 420, HEIGHT - 100));
+	cvtColor(roi, gray, CV_BGR2GRAY);
+	ApplyClahe(gray, gray, 4);
+	threshold(gray, binary, threshValue, 255.0, THRESH_BINARY);
+	cvtColor(binary, blob, CV_GRAY2BGR);
+
+	// detect and draw horizontal lines		
+	std::vector<DAEDALUS::Blob> blobs;
+	std::vector<DAEDALUS::Blob> hLines;
+	blobs = DAEDALUS::detectBlobs(blob, BLOB_BOUND);
+	hLines = DAEDALUS::detectHorLine(blobs, 12);
+	for (unsigned int j = 0; j < hLines.size(); j++){
+		for (int k = 0; k < 64; k++){
+			circle(blob, Point2d(k * 10, hLines.at(j).y), 5, Scalar(0, 255, 0));
+		}
+	}
+
+	// calcualte line_distance between multiple lines and determine whether its a parkingspot
+	// return result and distance needed to reach it
+	if (hLines.size() > 1)
+	{
+		for (unsigned int h = 0; h + 1 < hLines.size(); h++)
+		{
+			line_dist = abs(hLines.at(h).y - hLines.at(h + 1).y);
+			if (parallel  && line_dist >= MIN_DISTANCE_PARALLEL && line_dist <= MAX_DISTANCE_PARALLEL)
+			{
+				isParallelSpace = true;
+				distance = HEIGHT - hLines.at(h + 1).y;
+				//printf("result = %d hLines.size = %d, dist = %f, distance = %f\n", result, hLines.size(), line_dist, distance);
+			}
+			else if (!parallel  && line_dist >= MIN_DISTANCE_CROSS && line_dist <= MAX_DISTANCE_CROSS)
+			{
+				isCrossSpace = true;
+				distance = HEIGHT - hLines.at(h + 1).y;
+				//printf("result = %d hLines.size = %d, dist = %f, distance = %f\n", result, hLines.size(), line_dist, distance);
+			}
+		}
+	}
+		
+		// Adapting Threshold
+		if (blobs.size() > 600)
+			threshValue *= 1.3;
+		else if (blobs.size() > 220)
+			threshValue *= 1.1;
+		else if (blobs.size() < 50)
+			threshValue *= 0.7;
+		else if (blobs.size() < 160)
+			threshValue *= 0.9;
+
+		threshValue = threshValue > 255 ? 255 : threshValue;
+		threshValue = threshValue < 0 ? 0 : threshValue;
+
+		// printf("result = %d hLines.size = %d, dist = %f, blobs = %d, tresh = %f \n", result, hLines.size(), dist, blobs.size(), threshValue);
+}
+
+void cParkingspotDetection::ApplyClahe(cv::Mat inputImage, cv::Mat& outputImage, int limit)
+{
+	Ptr<CLAHE> clahe = createCLAHE();
+	clahe->setClipLimit(limit);
+	clahe->apply(inputImage, outputImage);
+}
+
+tVoid cParkingspotDetection::GenerateIPM(Mat inputImg, Mat &outputImg)
+{
+	vector<Point2f> origPoints;
+	origPoints.push_back(Point2f(- 1000, HEIGHT));
+	origPoints.push_back(Point2f(WIDTH + 1000, HEIGHT));
+	origPoints.push_back(Point2f(WIDTH, 180));
+	origPoints.push_back(Point2f(0, 180));
+
+	// The 4-points correspondences in the destination image
+	vector<Point2f> dstPoints;
+	dstPoints.push_back(Point2f(0, HEIGHT));
+	dstPoints.push_back(Point2f(WIDTH, HEIGHT));
+	dstPoints.push_back(Point2f(WIDTH, 0));
+	dstPoints.push_back(Point2f(0, 0));
+
+	// IPM object
+	IPM ipm(Size(WIDTH, HEIGHT), Size(WIDTH, HEIGHT), origPoints, dstPoints);
+	// ipm.drawPoints(origPoints, inputImg);
+
+	Mat inputImgGray;
+	// Color Conversion
+	if (inputImg.channels() == 3)
+		cvtColor(inputImg, inputImgGray, CV_BGR2GRAY);
+	else
+		inputImg.copyTo(inputImgGray);
+
+	ipm.applyHomography(inputImg, outputImg);
+	ipm.drawPoints(origPoints, inputImg);
+}
+
+
+
+
+/********************* Transmit Methods *****************************/
+tResult cParkingspotDetection::TransmitParkingInfo(tFloat32 value, tTimeStamp tsInputTime)
+{
+=======
+cParkingspotDetection::cParkingspotDetection(const tChar* __info):cFilter(__info)
+{
+	/****************** Start of Debug ***************/
+	SetPropertyBool(AF_PROP_SHOW_LOG,tTrue);
+	SetPropertyStr(AF_PROP_SHOW_LOG NSSUBPROP_DESCRIPTION, "If true show log values");
+
+}
+
+cParkingspotDetection::~cParkingspotDetection() {
+// -------------------------------------------------------------------------------------------------
+
+}
+
+tResult cParkingspotDetection::Init(tInitStage eStage, __exception)
+{
+	RETURN_IF_FAILED(cFilter::Init(eStage, __exception_ptr))
+  
+	if (eStage == StageFirst) 
+	{
+		CreateInputPins(__exception_ptr);
+		CreateOutputPins(__exception_ptr);
+	}
+	else if (eStage == StageNormal)
+    {
+		isFirstFrame = true;
+		isEnable = false;
+		ReadProperties();
+	}
+  
+	RETURN_NOERROR;
+}
+
+tResult cParkingspotDetection::Shutdown(tInitStage estage, __exception) {
+
+  if (estage == StageGraphReady)
+    {
+    }
+    else if (estage == StageNormal)
+    {
+    }
+    else if (estage == StageFirst)
+    {
+    }
+
+  return cFilter::Shutdown(estage,__exception_ptr);
+}
+
+tResult cParkingspotDetection::OnPinEvent(IPin* pSource, tInt nEventCode, tInt nParam1, tInt nParam2, IMediaSample* pMediaSample)
+{
+  RETURN_IF_POINTER_NULL(pMediaSample);
+  RETURN_IF_POINTER_NULL(pSource);
+
+  if(nEventCode == IPinEventSink::PE_MediaSampleReceived)
+  {
+	  tTimeStamp InputTimeStamp;
+      InputTimeStamp = pMediaSample->GetTime();
+
+	  if (pSource == &VideoInputPin && isEnable)
+	   {
+		   if (isFirstFrame)
+            {        
+                cObjectPtr<IMediaType> pType;
+                RETURN_IF_FAILED(VideoInputPin.GetMediaType(&pType));
+                cObjectPtr<IMediaTypeVideo> pTypeVideo;
+                RETURN_IF_FAILED(pType->GetInterface(IID_ADTF_MEDIA_TYPE_VIDEO, (tVoid**)&pTypeVideo));
+                const tBitmapFormat* pFormat = pTypeVideo->GetFormat();                                
+                if (pFormat == NULL)
+                {
+                    LOG_ERROR("No Bitmap information found on pin \"input\"");
+                    RETURN_ERROR(ERR_NOT_SUPPORTED);
+                }
+                m_sInputFormat.nPixelFormat = pFormat->nPixelFormat;
+                m_sInputFormat.nWidth = pFormat->nWidth;
+                m_sInputFormat.nHeight =  pFormat->nHeight;
+                m_sInputFormat.nBitsPerPixel = pFormat->nBitsPerPixel;
+                m_sInputFormat.nBytesPerLine = pFormat->nBytesPerLine;
+                m_sInputFormat.nSize = pFormat->nSize;
+                m_sInputFormat.nPaletteSize = pFormat->nPaletteSize;
+				isFirstFrame = false;
+            }
+            ProcessImage(pMediaSample, InputTimeStamp);
+        }
+	  else if(pSource == &DriverActionPin && isEnable)
+	  {
+		   tUInt32 DriverActionTime = 0;
+            tBool DriverIsProcessed = tFalse;
+            {   // focus for sample read lock
+                    __adtf_sample_read_lock_mediadescription(m_pDescriptionDecisionInput,pMediaSample,pCoderInput);       
+                    if(!DriverModuleBufferReaderFlag)
+                    {
+                        pCoderInput->GetID("i32Value", DriverNextActionBuffer);
+                        pCoderInput->GetID("ui32Timestamp",DriverTimeBuffer);
+                        pCoderInput->GetID("bIsExecuted",DriverIsProcessedBuffer);
+                        DriverModuleBufferReaderFlag = tTrue;
+                    }  
+                    // get the values from DriverNextAction
+                    pCoderInput->Get(DriverNextActionBuffer, (tVoid*)&DriverNextAction);
+                    pCoderInput->Get(DriverTimeBuffer, (tVoid*)&DriverActionTime);
+                    pCoderInput->Get(DriverIsProcessedBuffer, (tVoid*)&DriverIsProcessed);       
+			}
+			if (m_bShowLog)   
+			{
+                    LOG_ERROR(cString::Format("ParkingSpot Deteciton: DriverModule Data: ID -> %d time: %d isProcessed: %d",DriverNextAction, DriverActionTime,DriverIsProcessed));
+			}
+	  }
+	  else if(pSource == &StartPin)
+	  {
+		  {   // focus for sample read lock
+			  __adtf_sample_read_lock_mediadescription(m_pCoderDescBool,pMediaSample,pCoder);
+			  pCoder->Get("bValue", (tVoid*)&isEnable);        
+		  }
+		  if (m_bShowLog)   
+			{
+                    LOG_ERROR(cString::Format("ParkingSpot Deteciton: Start:%d",isEnable));
+			}
+	  }
+  }
+      RETURN_NOERROR;
+}
+
+/*************** Custom Method ********************/
+
+tVoid cParkingspotDetection::ReadProperties()
+{
+	/********************* Properties for Show Log **************************/
+	m_bShowLog = GetPropertyBool(AF_PROP_SHOW_LOG);
+}
+
+tResult cParkingspotDetection::CreateInputPins(__exception)
+{
+	cObjectPtr<IMediaDescriptionManager> pDescManager;
+    RETURN_IF_FAILED(_runtime->GetObject(OID_ADTF_MEDIA_DESCRIPTION_MANAGER,IID_ADTF_MEDIA_DESCRIPTION_MANAGER,(tVoid**)&pDescManager,__exception_ptr));
+  
+	// Media Description Bool
+    tChar const * strDescSignalBoolValue = pDescManager->GetMediaDescription("tBoolSignalValue");
+    RETURN_IF_POINTER_NULL(strDescSignalBoolValue);
+    cObjectPtr<IMediaType> pTypeSignalBoolValue = new cMediaType(0, 0, 0, "tBoolSignalValue", strDescSignalBoolValue,IMediaDescription::MDF_DDL_DEFAULT_VERSION);    
+    RETURN_IF_FAILED(pTypeSignalBoolValue->GetInterface(IID_ADTF_MEDIA_TYPE_DESCRIPTION, (tVoid**)&m_pCoderDescBool));
+
+	// Media Description ID 
+	tChar const * strDescIdValue = pDescManager->GetMediaDescription("tIdValue");    
+    RETURN_IF_POINTER_NULL(strDescIdValue);
+    cObjectPtr<IMediaType> pTypeIdValue = new cMediaType(0, 0, 0, "tIdValue", strDescIdValue,IMediaDescription::MDF_DDL_DEFAULT_VERSION);    
+	RETURN_IF_FAILED(pTypeIdValue->GetInterface(IID_ADTF_MEDIA_TYPE_DESCRIPTION, (tVoid**)&m_pDescriptionDecisionInput)); 
+
+	 //Input Pin from Camera
+    RETURN_IF_FAILED(VideoInputPin.Create("Video_Input", IPin::PD_Input, static_cast<IPinEventSink*>(this)));
+    RETURN_IF_FAILED(RegisterPin(&VideoInputPin)); 
+      
+     // Action Pin from Jury
+    RETURN_IF_FAILED(DriverActionPin.Create("Action",pTypeIdValue, static_cast<IPinEventSink*> (this)));
+    RETURN_IF_FAILED(RegisterPin(&DriverActionPin));
+
+	 // Start Pin to enable the filter
+    RETURN_IF_FAILED(StartPin.Create("Start",pTypeSignalBoolValue, static_cast<IPinEventSink*> (this)));
+    RETURN_IF_FAILED(RegisterPin(&StartPin));
+
+	RETURN_NOERROR;
+}
+
+tResult cParkingspotDetection::CreateOutputPins(__exception)
+{
+	cObjectPtr<IMediaDescriptionManager> pDescManager;
+    RETURN_IF_FAILED(_runtime->GetObject(OID_ADTF_MEDIA_DESCRIPTION_MANAGER,IID_ADTF_MEDIA_DESCRIPTION_MANAGER,(tVoid**)&pDescManager,__exception_ptr));
+
+	// Media Description Signal
+    tChar const * strDescSignalValue = pDescManager->GetMediaDescription("tSignalValue");
+    RETURN_IF_POINTER_NULL(strDescSignalValue);        
+    cObjectPtr<IMediaType> pTypeSignalValue = new cMediaType(0, 0, 0, "tSignalValue", strDescSignalValue,IMediaDescription::MDF_DDL_DEFAULT_VERSION);    
+    RETURN_IF_FAILED(pTypeSignalValue->GetInterface(IID_ADTF_MEDIA_TYPE_DESCRIPTION, (tVoid**)&m_pCoderDescSignal)); 
+
+	 //Acceleration Output
+    RETURN_IF_FAILED(ParkingInfoPin.Create("ParkingInfo", pTypeSignalValue, static_cast<IPinEventSink*> (this)));
+    RETURN_IF_FAILED(RegisterPin(&ParkingInfoPin));
+    
+
+	RETURN_NOERROR;
+}
+
+tResult cParkingspotDetection::ProcessImage(IMediaSample* pSample, tTimeStamp tsInputTime)
+{
+	RETURN_IF_POINTER_NULL(pSample);
+	const tVoid* l_pSrcBuffer;
+	IplImage* oImg = cvCreateImageHeader(cvSize(m_sInputFormat.nWidth, m_sInputFormat.nHeight), IPL_DEPTH_8U, 3);
+	RETURN_IF_FAILED(pSample->Lock(&l_pSrcBuffer));
+	oImg->imageData = (char*)l_pSrcBuffer;
+	Mat image(cvarrToMat(oImg));
+	cvReleaseImage(&oImg);
+	pSample->Unlock(l_pSrcBuffer);
+	inputImage = image.clone();
+	isEnable = false;
+	RETURN_NOERROR;
+}
+
+tVoid cParkingspotDetection::GetParkingInfo()
+{
+	Mat outputImg;
+	if(!inputImage.data)
+	{
+		string path = "G:\\Study stuff\\Semester 3\\AADC\\ParkingDetection\\images" + patch::to_string(i) + ".png";
+		inputImage = imread(path, 1);
+	}
+	GenerateIPM(inputImage, outputImg);
+	ParkingType parkingType;
+	result = parkingType.GetParkingInfo(gray);
+
+	//return result, distance;
+
+}
+
+tVoid cParkingspotDetection::GenerateIPM(Mat inputImg, Mat &outputImg)
+{
+	vector<Point2f> origPoints;
+	origPoints.push_back(Point2f(- 1000, HEIGHT));
+	origPoints.push_back(Point2f(WIDTH + 1000, HEIGHT));
+	origPoints.push_back(Point2f(WIDTH, 180));
+	origPoints.push_back(Point2f(0, 180));
+
+	// The 4-points correspondences in the destination image
+	vector<Point2f> dstPoints;
+	dstPoints.push_back(Point2f(0, HEIGHT));
+	dstPoints.push_back(Point2f(WIDTH, HEIGHT));
+	dstPoints.push_back(Point2f(WIDTH, 0));
+	dstPoints.push_back(Point2f(0, 0));
+
+	// IPM object
+	IPM ipm(Size(WIDTH, HEIGHT), Size(WIDTH, HEIGHT), origPoints, dstPoints);
+	// ipm.drawPoints(origPoints, inputImg);
+
+	Mat inputImgGray;
+	// Color Conversion
+	if (inputImg.channels() == 3)
+		cvtColor(inputImg, inputImgGray, CV_BGR2GRAY);
+	else
+		inputImg.copyTo(inputImgGray);
+
+	ipm.applyHomography(inputImg, outputImg);
+	ipm.drawPoints(origPoints, inputImg);
+}
+
+/********************* Transmit Methods *****************************/
+tResult cParkingspotDetection::TransmitParkingInfo(tFloat32 value, tTimeStamp tsInputTime)
+{
+>>>>>>> f96dbd57b445da358d738222a8ba7bec93354314
+    //__synchronized_obj(m_oTransmitAccelCritSection);
+
+    ////create new media sample
+    //cObjectPtr<IMediaSample> pSampleAccel;
+    //RETURN_IF_FAILED(AllocMediaSample((tVoid**)&pSampleAccel));
+
+    ////allocate memory with the size given by the descriptor
+    //cObjectPtr<IMediaSerializer> pSerializer;
+    //m_pCoderDescSignal->GetMediaSampleSerializer(&pSerializer);
+    //tInt nSize = pSerializer->GetDeserializedSize();
+    //RETURN_IF_FAILED(pSampleAccel->AllocBuffer(nSize));
+    //    
+    //{
+    //      __adtf_sample_write_lock_mediadescription(m_pCoderDescSignal, pSampleAccel, pCoderOutput);
+ 
+    //      pCoderOutput->Set("f32Value", (tVoid*)&f32Acceleration);    
+    //      pCoderOutput->Set("ui32ArduinoTimestamp", (tVoid*)&m_tsArduinoTime);    
+    //}
+    //      
+    // pSampleAccel->SetTime(tsInputTime);
+    // RETURN_IF_FAILED(m_oAccelerateOutputPin.Transmit(pSampleAccel));
+
+     RETURN_NOERROR;
+<<<<<<< HEAD
+}
+=======
+}
+>>>>>>> f96dbd57b445da358d738222a8ba7bec93354314

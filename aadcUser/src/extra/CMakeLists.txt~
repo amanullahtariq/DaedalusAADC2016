@@ -1,0 +1,4 @@
+add_subdirectory(imageSaveFilter)
+add_subdirectory(objectFilter)
+add_subdirectory(crossroadScriptFilter)
+add_subdirectory(baselineFilter)

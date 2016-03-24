@@ -1,0 +1,29 @@
+ #include "opencv2/highgui/highgui.hpp"
+ #include "opencv2/opencv.hpp"
+ #include "opencv2/core/core.hpp"
+ 
+  using namespace std;
+  using namespace cv;
+
+int main(){
+cv::Mat frame,frame32f;
+char filename[40];
+cv::Mat mean;
+const int count =1780;
+const int width  = 640;
+const int height = 480;
+cv::Mat resultframe = cv::Mat::zeros(height,width,CV_32FC3);
+for(int i = 0 ; i< count; i++){
+sprintf(filename,"/home/aadc/Desktop/images/base/%d.png",i);
+frame = imread(filename,CV_LOAD_IMAGE_COLOR);
+frame.convertTo(frame32f,CV_32FC3);
+resultframe +=frame32f;
+    cout << " i = " << i<<endl;
+//frame.release();
+}
+resultframe *= (1.0/count);
+
+// write to picture
+imwrite("/home/aadc/Desktop/images/base/result.png",resultframe);
+return 0;
+  }

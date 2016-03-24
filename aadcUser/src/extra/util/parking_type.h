@@ -1,0 +1,4 @@
+enum ParkingType {
+  CROSS,
+  PARALLEL
+};

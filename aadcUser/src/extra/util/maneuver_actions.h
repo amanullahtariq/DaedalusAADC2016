@@ -1,0 +1,10 @@
+enum ManeuverActions {
+  STRAIGHT,
+  LEFT,
+  RIGHT,
+  PARALLEL_PARKING,
+  CROSS_PARKING,
+  PULL_OUT_LEFT,
+  PULL_OUT_RIGHT,
+  NOOP
+};
