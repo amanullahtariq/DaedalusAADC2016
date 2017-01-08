@@ -1,10 +1,10 @@
 # README #
 This project is maintain no longer if you want to work or used it please [contact me](#contact). In order to get insight of this project check out the [presentation](http://www.slideshare.net/AmanullahTariq/daedalus-aadc2016)
 
-## Snapshots ##
+## Snapshots
 
 
-## Video ## 
+## Video
 Although this video is not from the final days or competition but it quite sum up what we where doing.
 [![IMAGE ALT TEXT HERE](https://img.youtube.com/vi/vpVAawVMVIE/0.jpg)](https://www.youtube.com/watch?v=vpVAawVMVIE)
 
