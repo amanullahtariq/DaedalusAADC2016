@@ -2,11 +2,13 @@
 This project is maintain no longer if you want to work or used it please [contact me](#contact). In order to get insight of this project check out the [presentation](http://www.slideshare.net/AmanullahTariq/daedalus-aadc2016)
 
 ## Snapshots
-
+![DaedALUs1](/images/image3.jpg)
+![DaedALUs2](/images/image2.jpg)
+![DaedALUs3](/images/image1.jpg)
 
 ## Video
 Although this video is not from the final days or competition but it quite sum up what we where doing.
-[![IMAGE ALT TEXT HERE](https://img.youtube.com/vi/vpVAawVMVIE/0.jpg)](https://www.youtube.com/watch?v=vpVAawVMVIE)
+[![Watch Video](https://img.youtube.com/vi/vpVAawVMVIE/0.jpg)](https://www.youtube.com/watch?v=vpVAawVMVIE)
 
 * Quick summary
 This is code for AADC 2016, by team DaedALUs from Uni Freiburg  enivornment.
